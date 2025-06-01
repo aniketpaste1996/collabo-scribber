@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CollaboBoard</title>
+    <style>
+        body { margin: 0; }
+        canvas { border: 1px solid #ccc; display: block; margin: 10px auto; }
+        #toolbar { text-align: center; margin: 10px; }
+    </style>
+</head>
+<body>
+<div id="toolbar">
+    <button onclick="setTool('draw')">Freehand</button>
+    <button onclick="setTool('rectangle')">Rectangle</button>
+    <input type="color" id="colorPicker" value="#000000">
+</div>
+<canvas id="board" width="800" height="600"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    const boardId = new URLSearchParams(window.location.search).get("boardId") || "default";
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+    const colorPicker = document.getElementById("colorPicker");
+    let drawing = false;
+    let tool = "draw";
+    let startX = 0, startY = 0;
+
+    function setTool(t) { tool = t; }
+
+    const socket = new SockJS("http://localhost:8080/ws");
+    const stompClient = Stomp.over(socket);
+    stompClient.connect({}, () => {
+      stompClient.subscribe(`/topic/board/${boardId}`, (msg) => {
+        const draw = JSON.parse(msg.body);
+        drawOnCanvas(draw);
+      });
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+      drawing = true;
+      startX = e.offsetX;
+      startY = e.offsetY;
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+      if (!drawing) return;
+      drawing = false;
+      const drawData = {
+        type: tool,
+        x: startX,
+        y: startY,
+        x2: e.offsetX,
+        y2: e.offsetY,
+        color: colorPicker.value,
+        boardId: boardId
+      };
+      drawOnCanvas(drawData);
+      stompClient.send(`/app/board/${boardId}`, {}, JSON.stringify(drawData));
+    });
+
+    function drawOnCanvas({ type, x, y, x2, y2, color }) {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      if (type === "draw") {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x2, y2);
+      } else if (type === "rectangle") {
+        ctx.rect(x, y, x2 - x, y2 - y);
+      }
+      ctx.stroke();
+    }
+</script>
+</body>
+</html>
