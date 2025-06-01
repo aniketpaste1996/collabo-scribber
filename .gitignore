@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring Boot
+*.pid
+
+# Application properties
+application.properties
+application.yml
